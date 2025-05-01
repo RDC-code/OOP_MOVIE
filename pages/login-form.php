@@ -2,9 +2,9 @@
 session_start();
 if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] == 0) {
-        header("Location: admin-dashboard.php");
+        header("Location: ../pages/admin-dashboard.php");
     } else {
-        header("Location: user-dashboard.php");
+        header("Location: ../pages/user-dashboard.php");
     }
     exit();
 }

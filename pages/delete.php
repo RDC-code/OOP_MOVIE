@@ -1,6 +1,6 @@
 <?php
-require_once '../config/database.php'; // Include database connection
-require_once '../classes/Movie.php';
+require_once '../config/db.php'; // Include database connection
+
 
 if (isset($_GET['id'])) {
     $movie_id = $_GET['id'];
