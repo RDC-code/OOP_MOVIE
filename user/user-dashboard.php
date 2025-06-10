@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] != 1) {
-    header("Location: login-form.php");
+    header("Location: ../pages/login-form.php");
     exit();
 }
 
@@ -28,15 +28,18 @@ $movies = $movie->getMovies();
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav ms-auto">
-                <li class="nav-item">
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item me-3">
                     <form class="d-flex" method="GET">
                         <input class="form-control me-2" type="search" name="search" placeholder="Search movies..." aria-label="Search">
                         <button class="btn btn-outline-light" type="submit">Search</button>
                     </form>
                 </li>
-                <li class="nav-item ms-3">
-                    <a href="logout.php" class="btn btn-danger">Logout</a>
+                <li class="nav-item me-2">
+                    <a href="user-profile.php" class="btn btn-outline-light">My Profile</a>
+                </li>
+                <li class="nav-item">
+                    <a href="../pages/logout.php" class="btn btn-danger">Logout</a>
                 </li>
             </ul>
         </div>
@@ -66,8 +69,7 @@ $movies = $movie->getMovies();
                     <div class="card bg-secondary text-white border-0 shadow-lg">
                         <div class="position-relative">
                             <img src="../uploads/<?php echo $movie['image']; ?>" class="card-img-top" alt="<?php echo $movie['title']; ?>">
-                            
-                            <!-- Play Button PNG Overlay -->
+                            <!-- Play Button Overlay -->
                             <a href="https://www.youtube.com/results?search_query=<?php echo urlencode($movie['title']); ?>" target="_blank" class="position-absolute top-50 start-50 translate-middle">
                                 <img src="../assets/play-button.png" class="img-fluid" style="width: 60px;" alt="Play">
                             </a>

@@ -1,5 +1,5 @@
 <?php
-include '../config/db.php';
+require_once '../config/db.php';
 
 class Movie {
     private $conn;
@@ -26,6 +26,14 @@ class Movie {
     }
 
     public function deleteMovie($id) {
+        $movie = $this->getMovieById($id);
+        if ($movie && !empty($movie['image'])) {
+            $imagePath = '../uploads/' . $movie['image'];
+            if (file_exists($imagePath)) {
+                unlink($imagePath);
+            }
+        }
+
         $query = "DELETE FROM " . $this->table . " WHERE id = :id";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id);
@@ -38,7 +46,7 @@ class Movie {
         } else {
             $query = "UPDATE " . $this->table . " SET title = :title WHERE id = :id";
         }
-        
+
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':title', $title);
         if ($image) {
@@ -47,7 +55,6 @@ class Movie {
         $stmt->bindParam(':id', $id);
         return $stmt->execute();
     }
-    
 
     public function getMovieById($id) {
         $query = "SELECT * FROM " . $this->table . " WHERE id = :id";
@@ -59,24 +66,38 @@ class Movie {
 }
 
 // Handle Create (Upload)
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload'])) {
     $movie = new Movie();
     $title = $_POST['title'];
-
     $target_dir = "../uploads/";
+
     if (!is_dir($target_dir)) {
         mkdir($target_dir, 0777, true);
     }
-    
-    $image = basename($_FILES["image"]["name"]);
-    $target_file = $target_dir . $image;
 
-    if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
-        $movie->addMovie($title, $image);
-        header("Location: ../pages/admin-dashboard.php?success=1");
-        exit();
+    $imageName = $_FILES['image']['name'];
+    $imageTmp = $_FILES['image']['tmp_name'];
+    $imageSize = $_FILES['image']['size'];
+    $imageExt = strtolower(pathinfo($imageName, PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'gif'];
+
+    if (in_array($imageExt, $allowed)) {
+        if ($imageSize < 2 * 1024 * 1024) { // 2MB limit
+            $uniqueName = uniqid('movie_', true) . '.' . $imageExt;
+            $targetFile = $target_dir . $uniqueName;
+
+            if (move_uploaded_file($imageTmp, $targetFile)) {
+                $movie->addMovie($title, $uniqueName);
+                header("Location: ../admin/manage-movies.php?success=1");
+                exit();
+            } else {
+                echo "❌ Failed to upload image.";
+            }
+        } else {
+            echo "❌ Image too large. Max 2MB allowed.";
+        }
     } else {
-        echo "Failed to upload image.";
+        echo "❌ Invalid image format. Allowed: jpg, jpeg, png, gif.";
     }
 }
 
@@ -84,33 +105,50 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['upload'])) {
 if (isset($_GET['delete'])) {
     $movie = new Movie();
     $movie->deleteMovie($_GET['delete']);
-    header("Location: ../pages/admin-dashboard.php");
+    header("Location: ../admin/manage-movies.php?deleted=1");
     exit();
 }
 
 // Handle Update
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update'])) {
     $movie = new Movie();
     $id = $_POST['id'];
     $title = $_POST['title'];
 
     $target_dir = "../uploads/";
-    $image = basename($_FILES["image"]["name"]);
-    
-    if (!empty($image)) { // If new image is uploaded
-        $target_file = $target_dir . $image;
+    $imageName = $_FILES['image']['name'];
+    $imageTmp = $_FILES['image']['tmp_name'];
+    $imageExt = strtolower(pathinfo($imageName, PATHINFO_EXTENSION));
+    $allowed = ['jpg', 'jpeg', 'png', 'gif'];
 
-        if (move_uploaded_file($_FILES["image"]["tmp_name"], $target_file)) {
-            $movie->updateMovie($id, $title, $image);
-            header("Location: ../pages/admin-dashboard.php?updated=1");
-            exit();
+    if (!empty($imageName)) {
+        if (in_array($imageExt, $allowed)) {
+            $uniqueName = uniqid('movie_', true) . '.' . $imageExt;
+            $targetFile = $target_dir . $uniqueName;
+
+            if (move_uploaded_file($imageTmp, $targetFile)) {
+                // Remove old image
+                $oldMovie = $movie->getMovieById($id);
+                if ($oldMovie && !empty($oldMovie['image'])) {
+                    $oldImagePath = $target_dir . $oldMovie['image'];
+                    if (file_exists($oldImagePath)) {
+                        unlink($oldImagePath);
+                    }
+                }
+
+                $movie->updateMovie($id, $title, $uniqueName);
+                header("Location: ../admin/manage-movies.php?updated=1");
+                exit();
+            } else {
+                echo "❌ Failed to upload new image.";
+            }
         } else {
-            echo "Failed to upload new image.";
+            echo "❌ Invalid image format.";
         }
-    } else { 
-        // If no new image, update only the title
-        $movie->updateMovie($id, $title, null);
-        header("Location: ../pages/admin-dashboard.php?updated=1");
+    } else {
+        // Only title update
+        $movie->updateMovie($id, $title);
+        header("Location: ../admin/manage-movies.php?updated=1");
         exit();
     }
 }
